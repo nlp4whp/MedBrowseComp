@@ -13,11 +13,13 @@ from openai import OpenAI
 from gemini_inference import GeminiInference, run_inference_multithread as gemini_run_inference_multithread, GEMINI_MODELS
 from sonar_inference import SonarInference, run_inference_multithread as sonar_run_inference_multithread, SONAR_MODELS
 from openai_search_inference import OpenAISearchInference, run_inference_multithread as openai_search_run_inference_multithread, OPENAI_SEARCH_MODELS
+from dashscope_tavily_inference import DashscopeTavilyInference, run_inference_multithread as dashscope_run_inference_multithread, DASHSCOPE_MODELS
 
 ALL_MODELS = {}
 ALL_MODELS.update(GEMINI_MODELS)
 ALL_MODELS.update(SONAR_MODELS)
 ALL_MODELS.update(OPENAI_SEARCH_MODELS)
+ALL_MODELS.update(DASHSCOPE_MODELS)
 
 # Configure logging
 logging.basicConfig(
@@ -31,7 +33,10 @@ logging.basicConfig(
 logger = logging.getLogger("NCTProcessor")
 
 # --- LLM as Judge Setup ---
-client = OpenAI() # Assumes OPENAI_API_KEY is set in environment
+client = OpenAI(
+    api_key=os.environ.get("DASHSCOPE_API_KEY"),
+    base_url=os.environ.get("DASHSCOPE_BASE_URL"),
+)
 
 JUDGE_PROMPT = """Judge whether the following [response] to [question] is correct or not based on the
 precise and unambiguous [correct_answer] below.
@@ -1132,6 +1137,9 @@ def main():
         inference_kwargs = {"model_name": args.model, "web_search_options": {"search_context_size": args.search_context_size}}
         # if not using search
         # inference_kwargs = {"model_name": args.model, "web_search_options": {}}
+    elif args.model in DASHSCOPE_MODELS:
+        run_inference = dashscope_run_inference_multithread
+        inference_kwargs = {"model_name": args.model}
     else:
         logger.error(f"Model {args.model} not recognized.")
         return
